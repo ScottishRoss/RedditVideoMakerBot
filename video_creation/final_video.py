@@ -350,23 +350,29 @@ def make_final_video(
     filename = f"{name_normalize(title)[:251]}"
     subreddit = settings.config["reddit"]["thread"]["subreddit"]
 
-    if not exists(f"./results/{subreddit}"):
-        print_substep("The 'results' folder could not be found so it was automatically created.")
-        os.makedirs(f"./results/{subreddit}")
+    # Create a shorter directory name if multiple subreddits are combined
+    if '+' in subreddit:
+        subreddit_dir = "multi_subreddit"
+    else:
+        subreddit_dir = subreddit
 
-    if not exists(f"./results/{subreddit}/OnlyTTS") and allowOnlyTTSFolder:
+    if not exists(f"./results/{subreddit_dir}"):
+        print_substep("The 'results' folder could not be found so it was automatically created.")
+        os.makedirs(f"./results/{subreddit_dir}")
+
+    if not exists(f"./results/{subreddit_dir}/OnlyTTS") and allowOnlyTTSFolder:
         print_substep("The 'OnlyTTS' folder could not be found so it was automatically created.")
-        os.makedirs(f"./results/{subreddit}/OnlyTTS")
+        os.makedirs(f"./results/{subreddit_dir}/OnlyTTS")
 
     # create a thumbnail for the video
     settingsbackground = settings.config["settings"]["background"]
 
     if settingsbackground["background_thumbnail"]:
-        if not exists(f"./results/{subreddit}/thumbnails"):
+        if not exists(f"./results/{subreddit_dir}/thumbnails"):
             print_substep(
                 "The 'results/thumbnails' folder could not be found so it was automatically created."
             )
-            os.makedirs(f"./results/{subreddit}/thumbnails")
+            os.makedirs(f"./results/{subreddit_dir}/thumbnails")
         # get the first file with the .png extension from assets/backgrounds and use it as a background for the thumbnail
         first_image = next(
             (file for file in os.listdir("assets/backgrounds") if file.endswith(".png")),
@@ -414,7 +420,7 @@ def make_final_video(
         old_percentage = pbar.n
         pbar.update(status - old_percentage)
 
-    defaultPath = f"results/{subreddit}"
+    defaultPath = f"results/{subreddit_dir}"
     with ProgressFfmpeg(length, on_update_example) as progress:
         path = defaultPath + f"/{filename}"
         path = (
