@@ -62,13 +62,13 @@ def get_background_config(mode: str):
     try:
         choice = str(settings.config["settings"]["background"][f"background_{mode}"]).casefold()
     except AttributeError:
-        print_substep("No background selected. Picking random background'")
+        print_substep("No background selected. Picking random background")
         choice = None
 
-    # Handle default / not supported background using default option.
-    # Default : pick random from supported background.
-    if not choice or choice not in background_options[mode]:
+    # Always pick random background unless explicitly specified
+    if not choice or choice == " " or choice not in background_options[mode]:
         choice = random.choice(list(background_options[mode].keys()))
+        print_substep(f"Selected random {mode} background: {choice}")
 
     return background_options[mode][choice]
 
