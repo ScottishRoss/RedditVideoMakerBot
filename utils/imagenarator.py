@@ -30,16 +30,16 @@ def draw_multiple_line_text(
     if not transparent:
         # Calculate text block dimensions
         max_line_width = max(getsize(font, line)[0] for line in lines)
-        text_block_width = max_line_width + 80  # Add padding
-        text_block_height = total_height + 40  # Add padding
+        text_block_width = max_line_width + 60  # Increased padding
+        text_block_height = total_height + 40  # Increased padding
         
         # Calculate background position
         bg_x = (image_width - text_block_width) / 2
-        bg_y = y - 20  # Add padding above text
+        bg_y = y - 20  # Increased padding above text
         
-        # Create gradient background
+        # Create gradient background with higher opacity
         for i in range(int(text_block_height)):
-            alpha = int(200 - (i / text_block_height) * 100)  # Gradient from 200 to 100
+            alpha = int(200 - (i / text_block_height) * 50)  # Gradient from 200 to 150
             draw.rectangle(
                 [(bg_x, bg_y + i), (bg_x + text_block_width, bg_y + i + 1)],
                 fill=(0, 0, 0, alpha)
@@ -51,9 +51,10 @@ def draw_multiple_line_text(
         x = (image_width - line_width) / 2
         
         if transparent:
-            # Draw text shadow/outline
-            shadow_color = "black"
-            for offset_x, offset_y in [(1, 1), (-1, 1), (1, -1), (-1, -1)]:
+            # Draw text shadow/outline for transparent mode
+            shadow_color = (0, 0, 0, 255)  # Solid black for shadow
+            # Draw multiple layers of shadow for stronger effect
+            for offset_x, offset_y in [(3, 3), (-3, 3), (3, -3), (-3, -3), (0, 3), (0, -3), (3, 0), (-3, 0)]:
                 draw.text(
                     (x + offset_x, y + offset_y),
                     line,
@@ -62,8 +63,9 @@ def draw_multiple_line_text(
                 )
         else:
             # Draw text shadow/outline for non-transparent mode
-            shadow_color = (0, 0, 0, 180)  # Semi-transparent black
-            for offset_x, offset_y in [(2, 2), (-2, 2), (2, -2), (-2, -2)]:
+            shadow_color = (0, 0, 0, 200)  # Semi-transparent black
+            # Draw multiple layers of shadow for stronger effect
+            for offset_x, offset_y in [(3, 3), (-3, 3), (3, -3), (-3, -3), (0, 3), (0, -3), (3, 0), (-3, 0)]:
                 draw.text(
                     (x + offset_x, y + offset_y),
                     line,
@@ -71,7 +73,7 @@ def draw_multiple_line_text(
                     fill=shadow_color
                 )
         
-        # Draw main text
+        # Draw main text with increased size and brightness
         draw.text((x, y), line, font=font, fill=text_color)
         y += line_height + padding
 
@@ -84,9 +86,11 @@ def imagemaker(theme, reddit_obj: dict, txtclr, padding=5, transparent=False) ->
     id = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
 
     if transparent:
-        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Bold.ttf"), 100)
+        # Increase font size for better visibility
+        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Bold.ttf"), 120)
     else:
-        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Regular.ttf"), 100)
+        # Increase font size for better visibility
+        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Bold.ttf"), 120)
     size = (1920, 1080)
 
     image = Image.new("RGBA", size, theme)

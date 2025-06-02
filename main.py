@@ -15,6 +15,7 @@ from utils.console import print_markdown, print_step, print_substep
 from utils.ffmpeg_install import ffmpeg_install
 from utils.id import id
 from utils.version import checkversion
+from utils.youtube_uploader import upload_video
 from video_creation.background import (
     chop_background,
     download_background_audio,
@@ -27,14 +28,10 @@ from video_creation.voices import save_text_to_mp3
 
 __VERSION__ = "3.3.0"
 
-print(
-    """
-██████╗ ███████╗██████╗ ██████╗ ██╗████████╗    ██╗   ██╗██╗██████╗ ███████╗ ██████╗     ███╗   ███╗ █████╗ ██╗  ██╗███████╗██████╗
-██╔══██╗██╔════╝██╔══██╗██╔══██╗██║╚══██╔══╝    ██║   ██║██║██╔══██╗██╔════╝██╔═══██╗    ████╗ ████║██╔══██╗██║ ██╔╝██╔════╝██╔══██╗
-██████╔╝█████╗  ██║  ██║██║  ██║██║   ██║       ██║   ██║██║██║  ██║█████╗  ██║   ██║    ██╔████╔██║███████║█████╔╝ █████╗  ██████╔╝
-██╔══██╗██╔══╝  ██║  ██║██║  ██║██║   ██║       ╚██╗ ██╔╝██║██║  ██║██╔══╝  ██║   ██║    ██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══╝  ██╔══██╗
-██║  ██║███████╗██████╔╝██████╔╝██║   ██║        ╚████╔╝ ██║██████╔╝███████╗╚██████╔╝    ██║ ╚═╝ ██║██║  ██║██║  ██╗███████╗██║  ██║
-╚═╝  ╚═╝╚══════╝╚═════╝ ╚═════╝ ╚═╝   ╚═╝         ╚═══╝  ╚═╝╚═════╝ ╚══════╝ ╚═════╝     ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+print_markdown(
+    """# Reddit Video Maker Bot
+Version: {__VERSION__}
+Made by u/elejke
 """
 )
 print_markdown(
@@ -57,7 +54,22 @@ def main(POST_ID=None) -> None:
     download_background_video(bg_config["video"])
     download_background_audio(bg_config["audio"])
     chop_background(bg_config, length, reddit_object)
-    make_final_video(number_of_comments, length, reddit_object, bg_config)
+    
+    # Get the subreddit name (handle multiple subreddits)
+    subreddit = settings.config["reddit"]["thread"]["subreddit"]
+    if '+' in subreddit:
+        subreddit = subreddit.split('+')[0]  # Use the first subreddit for title/description
+    
+    # Create the video
+    video_path = make_final_video(number_of_comments, length, reddit_object, bg_config)
+    
+    # Upload to YouTube
+    print_step("Uploading video to YouTube...")
+    video_id = upload_video(video_path, reddit_object, subreddit)
+    if video_id:
+        print_substep(f"Video uploaded successfully! Video ID: {video_id}")
+    else:
+        print_substep("Failed to upload video to YouTube", style="red")
 
 
 def run_many(times) -> None:

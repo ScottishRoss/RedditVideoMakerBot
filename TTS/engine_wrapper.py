@@ -67,40 +67,53 @@ class TTSEngine:
             comment["comment_body"] = re.sub(r'\."\.', '".', comment["comment_body"])
 
     def run(self) -> Tuple[int, int]:
+        """Run the TTS engine.
+        Returns:
+            Tuple[int, int]: A tuple containing (total_length, number_of_comments)
+        """
+        print_step("Generating TTS audio...")
+        
+        # Create the directory for MP3 files
         Path(self.path).mkdir(parents=True, exist_ok=True)
-        print_step("Saving Text to MP3 files...")
+        
+        if settings.config["settings"]["tts"]["no_emojis"]:
+            self.reddit_object["thread_title"] = self.reddit_object["thread_title"].encode("ascii", "ignore").decode()
+            self.reddit_object["thread_post"] = self.reddit_object["thread_post"].encode("ascii", "ignore").decode()
+            for idx, comment in enumerate(self.reddit_object["comments"]):
+                self.reddit_object["comments"][idx]["comment_body"] = (
+                    self.reddit_object["comments"][idx]["comment_body"].encode("ascii", "ignore").decode()
+                )
 
-        self.add_periods()
-        self.call_tts("title", process_text(self.reddit_object["thread_title"]))
-        # processed_text = ##self.reddit_object["thread_post"] != ""
-        idx = 0
+        # Create longer silence for title display (4 seconds)
+        silence = AudioClip(
+            make_frame=lambda t: np.sin(440 * 2 * np.pi * t),
+            duration=4.0,
+            fps=44100,
+        )
+        silence = volumex(silence, 0)
+        silence.write_audiofile(f"{self.path}/title_silence.mp3", fps=44100, verbose=False, logger=None)
+        self.length += 4.0  # Add the silence duration to total length
 
+        # Generate content audio
         if settings.config["settings"]["storymode"]:
             if settings.config["settings"]["storymodemethod"] == 0:
-                if len(self.reddit_object["thread_post"]) > self.tts_module.max_chars:
-                    self.split_post(self.reddit_object["thread_post"], "postaudio")
-                else:
-                    self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]))
+                self.call_tts("post", process_text(self.reddit_object["thread_post"]))
+                number_of_comments = 1
             elif settings.config["settings"]["storymodemethod"] == 1:
-                for idx, text in track(enumerate(self.reddit_object["thread_post"])):
-                    self.call_tts(f"postaudio-{idx}", process_text(text))
-
+                for idx, text in enumerate(self.reddit_object["thread_post"]):
+                    self.call_tts(f"post-{idx}", process_text(text))
+                number_of_comments = len(self.reddit_object["thread_post"])
         else:
-            for idx, comment in track(enumerate(self.reddit_object["comments"]), "Saving..."):
-                # ! Stop creating mp3 files if the length is greater than max length.
-                if self.length > self.max_length and idx > 1:
-                    self.length -= self.last_clip_length
-                    idx -= 1
-                    break
-                if (
-                    len(comment["comment_body"]) > self.tts_module.max_chars
-                ):  # Split the comment if it is too long
-                    self.split_post(comment["comment_body"], idx)  # Split the comment
-                else:  # If the comment is not too long, just call the tts engine
-                    self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+            for idx, comment in enumerate(self.reddit_object["comments"]):
+                self.call_tts(idx, process_text(comment["comment_body"]))
+            number_of_comments = len(self.reddit_object["comments"])
 
-        print_substep("Saved Text to MP3 files successfully.", style="bold green")
-        return self.length, idx
+        # Generate ending audio
+        ending_text = "What do you think? Comment below your thoughts"
+        self.call_tts("ending", ending_text)
+
+        print_step("TTS audio generated successfully! 🎉")
+        return self.length, number_of_comments
 
     def split_post(self, text: str, idx):
         split_files = []

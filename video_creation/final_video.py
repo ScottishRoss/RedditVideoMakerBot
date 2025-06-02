@@ -5,6 +5,7 @@ import tempfile
 import textwrap
 import threading
 import time
+from datetime import datetime
 from os.path import exists  # Needs to be imported specifically
 from pathlib import Path
 from typing import Dict, Final, Tuple
@@ -190,19 +191,21 @@ def make_final_video(
     length: int,
     reddit_obj: dict,
     background_config: Dict[str, Tuple],
-):
+) -> str:
     """Gathers audio clips, gathers all screenshots, stitches them together and saves the final video to assets/temp
     Args:
         number_of_clips (int): Index to end at when going through the screenshots'
         length (int): Length of the video
         reddit_obj (dict): The reddit object that contains the posts to read.
         background_config (Tuple[str, str, str, Any]): The background config to use.
+    Returns:
+        str: Path to the created video file
     """
     # settings values
     W: Final[int] = int(settings.config["settings"]["resolution_w"])
     H: Final[int] = int(settings.config["settings"]["resolution_h"])
-
     opacity = settings.config["settings"]["opacity"]
+    settingsbackground = settings.config["settings"]["background"]
 
     reddit_id = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
 
@@ -213,6 +216,39 @@ def make_final_video(
 
     print_step("Creating the final video 🎥")
 
+    # Create date-based folder structure
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    base_path = f"./results/{current_date}"
+    
+    if not exists(base_path):
+        print_substep(f"Creating date-based folder: {current_date}")
+        os.makedirs(base_path)
+
+    # Create subreddit folder inside date folder
+    subreddit = settings.config["reddit"]["thread"]["subreddit"]
+    if '+' in subreddit:
+        subreddit_dir = "multi_subreddit"
+    else:
+        subreddit_dir = subreddit
+
+    subreddit_path = f"{base_path}/{subreddit_dir}"
+    if not exists(subreddit_path):
+        print_substep(f"Creating subreddit folder: {subreddit_dir}")
+        os.makedirs(subreddit_path)
+
+    if allowOnlyTTSFolder:
+        only_tts_path = f"{subreddit_path}/OnlyTTS"
+        if not exists(only_tts_path):
+            print_substep("Creating OnlyTTS folder")
+            os.makedirs(only_tts_path)
+
+    # Update paths to use date-based structure
+    if settingsbackground["background_thumbnail"]:
+        thumbnails_path = f"{subreddit_path}/thumbnails"
+        if not exists(thumbnails_path):
+            print_substep("Creating thumbnails folder")
+            os.makedirs(thumbnails_path)
+
     background_clip = ffmpeg.input(prepare_background(reddit_id, W=W, H=H))
 
     # Gather all audio clips
@@ -220,37 +256,77 @@ def make_final_video(
     if number_of_clips == 0 and settings.config["settings"]["storymode"] == "false":
         print(
             "No audio clips to gather. Please use a different TTS or post."
-        )  # This is to fix the TypeError: unsupported operand type(s) for +: 'int' and 'NoneType'
+        )
         exit()
+    
+    # Function to verify audio file exists and has content
+    def verify_audio_file(file_path: str) -> bool:
+        if not os.path.exists(file_path):
+            print(f"Error: Audio file not found: {file_path}")
+            return False
+        try:
+            probe = ffmpeg.probe(file_path)
+            if float(probe["format"]["duration"]) <= 0:
+                print(f"Error: Audio file has no content: {file_path}")
+                return False
+            return True
+        except Exception as e:
+            print(f"Error verifying audio file {file_path}: {str(e)}")
+            return False
+
+    # Add title silence
+    title_silence = f"assets/temp/{reddit_id}/mp3/title_silence.mp3"
+    if not verify_audio_file(title_silence):
+        raise Exception("Missing or invalid title silence file")
+    audio_clips.append(ffmpeg.input(title_silence))
+    audio_clips_durations = [4.0]  # 4 seconds of silence for title
+
     if settings.config["settings"]["storymode"]:
         if settings.config["settings"]["storymodemethod"] == 0:
-            audio_clips = [ffmpeg.input(f"assets/temp/{reddit_id}/mp3/title.mp3")]
-            audio_clips.insert(1, ffmpeg.input(f"assets/temp/{reddit_id}/mp3/postaudio.mp3"))
+            audio_file = f"assets/temp/{reddit_id}/mp3/post.mp3"
+            if not verify_audio_file(audio_file):
+                raise Exception(f"Missing or invalid audio file: {audio_file}")
+            audio_clips.append(ffmpeg.input(audio_file))
+            audio_clips_durations.append(
+                float(ffmpeg.probe(audio_file)["format"]["duration"])
+            )
         elif settings.config["settings"]["storymodemethod"] == 1:
-            audio_clips = [
-                ffmpeg.input(f"assets/temp/{reddit_id}/mp3/postaudio-{i}.mp3")
-                for i in track(range(number_of_clips + 1), "Collecting the audio files...")
-            ]
-            audio_clips.insert(0, ffmpeg.input(f"assets/temp/{reddit_id}/mp3/title.mp3"))
-
+            for i in range(number_of_clips):
+                audio_file = f"assets/temp/{reddit_id}/mp3/post-{i}.mp3"
+                if not verify_audio_file(audio_file):
+                    raise Exception(f"Missing or invalid audio file: {audio_file}")
+                audio_clips.append(ffmpeg.input(audio_file))
+                audio_clips_durations.append(
+                    float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/post-{i}.mp3")["format"]["duration"])
+                )
     else:
-        audio_clips = [
-            ffmpeg.input(f"assets/temp/{reddit_id}/mp3/{i}.mp3") for i in range(number_of_clips)
-        ]
-        audio_clips.insert(0, ffmpeg.input(f"assets/temp/{reddit_id}/mp3/title.mp3"))
+        for i in range(number_of_clips):
+            audio_file = f"assets/temp/{reddit_id}/mp3/{i}.mp3"
+            if not verify_audio_file(audio_file):
+                raise Exception(f"Missing or invalid audio file: {audio_file}")
+            audio_clips.append(ffmpeg.input(audio_file))
+            audio_clips_durations.append(
+                float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/{i}.mp3")["format"]["duration"])
+            )
 
-        audio_clips_durations = [
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/{i}.mp3")["format"]["duration"])
-            for i in range(number_of_clips)
-        ]
-        audio_clips_durations.insert(
-            0,
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")["format"]["duration"]),
-        )
-    audio_concat = ffmpeg.concat(*audio_clips, a=1, v=0)
-    ffmpeg.output(
-        audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
-    ).overwrite_output().run(quiet=True)
+    # Add ending audio
+    ending_audio = f"assets/temp/{reddit_id}/mp3/ending.mp3"
+    if not verify_audio_file(ending_audio):
+        raise Exception("Missing or invalid ending audio file")
+    audio_clips.append(ffmpeg.input(ending_audio))
+    audio_clips_durations.append(
+        float(ffmpeg.probe(ending_audio)["format"]["duration"])
+    )
+
+    # Concatenate audio with error handling
+    try:
+        audio_concat = ffmpeg.concat(*audio_clips, a=1, v=0)
+        ffmpeg.output(
+            audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
+        ).overwrite_output().run(quiet=True)
+    except ffmpeg.Error as e:
+        print(f"Error concatenating audio: {e.stderr.decode('utf8')}")
+        raise Exception("Failed to concatenate audio files")
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
@@ -286,23 +362,8 @@ def make_final_video(
 
     current_time = 0
     if settings.config["settings"]["storymode"]:
-        audio_clips_durations = [
-            float(
-                ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/postaudio-{i}.mp3")["format"]["duration"]
-            )
-            for i in range(number_of_clips)
-        ]
-        audio_clips_durations.insert(
-            0,
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")["format"]["duration"]),
-        )
         if settings.config["settings"]["storymodemethod"] == 0:
-            image_clips.insert(
-                1,
-                ffmpeg.input(f"assets/temp/{reddit_id}/png/story_content.png").filter(
-                    "scale", screenshot_width, -1
-                ),
-            )
+            # Show title during silence
             background_clip = background_clip.overlay(
                 image_clips[0],
                 enable=f"between(t,{current_time},{current_time + audio_clips_durations[0]})",
@@ -310,69 +371,84 @@ def make_final_video(
                 y="(main_h-overlay_h)/2",
             )
             current_time += audio_clips_durations[0]
+
+            # Show content with TTS
+            image_clips.insert(
+                1,
+                ffmpeg.input(f"assets/temp/{reddit_id}/png/story_content.png").filter(
+                    "scale", screenshot_width, -1
+                ),
+            )
+            background_clip = background_clip.overlay(
+                image_clips[1],
+                enable=f"between(t,{current_time},{current_time + audio_clips_durations[1]})",
+                x="(main_w-overlay_w)/2",
+                y="(main_h-overlay_h)/2",
+            )
+            current_time += audio_clips_durations[1]
         elif settings.config["settings"]["storymodemethod"] == 1:
-            for i in track(range(0, number_of_clips + 1), "Collecting the image files..."):
+            # Show title during silence
+            background_clip = background_clip.overlay(
+                image_clips[0],
+                enable=f"between(t,{current_time},{current_time + audio_clips_durations[0]})",
+                x="(main_w-overlay_w)/2",
+                y="(main_h-overlay_h)/2",
+            )
+            current_time += audio_clips_durations[0]
+
+            # Show content slides with TTS
+            for i in track(range(0, number_of_clips), "Collecting the image files..."):
                 image_clips.append(
                     ffmpeg.input(f"assets/temp/{reddit_id}/png/img{i}.png")["v"].filter(
                         "scale", screenshot_width, -1
                     )
                 )
                 background_clip = background_clip.overlay(
-                    image_clips[i],
-                    enable=f"between(t,{current_time},{current_time + audio_clips_durations[i]})",
+                    image_clips[i + 1],
+                    enable=f"between(t,{current_time},{current_time + audio_clips_durations[i + 1]})",
                     x="(main_w-overlay_w)/2",
                     y="(main_h-overlay_h)/2",
                 )
-                current_time += audio_clips_durations[i]
+                current_time += audio_clips_durations[i + 1]
     else:
-        for i in range(0, number_of_clips + 1):
+        # Show title during silence
+        background_clip = background_clip.overlay(
+            image_clips[0],
+            enable=f"between(t,{current_time},{current_time + audio_clips_durations[0]})",
+            x="(main_w-overlay_w)/2",
+            y="(main_h-overlay_h)/2",
+        )
+        current_time += audio_clips_durations[0]
+
+        # Show comments with TTS
+        for i in range(0, number_of_clips):
             image_clips.append(
                 ffmpeg.input(f"assets/temp/{reddit_id}/png/comment_{i}.png")["v"].filter(
                     "scale", screenshot_width, -1
                 )
             )
-            image_overlay = image_clips[i].filter("colorchannelmixer", aa=opacity)
-            assert (
-                audio_clips_durations is not None
-            ), "Please make a GitHub issue if you see this. Ping @JasonLovesDoggo on GitHub."
+            image_overlay = image_clips[i + 1].filter("colorchannelmixer", aa=opacity)
             background_clip = background_clip.overlay(
                 image_overlay,
-                enable=f"between(t,{current_time},{current_time + audio_clips_durations[i]})",
+                enable=f"between(t,{current_time},{current_time + audio_clips_durations[i + 1]})",
                 x="(main_w-overlay_w)/2",
                 y="(main_h-overlay_h)/2",
             )
-            current_time += audio_clips_durations[i]
+            current_time += audio_clips_durations[i + 1]
 
     title = re.sub(r"[^\w\s-]", "", reddit_obj["thread_title"])
     idx = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
     title_thumb = reddit_obj["thread_title"]
 
     filename = f"{name_normalize(title)[:251]}"
-    subreddit = settings.config["reddit"]["thread"]["subreddit"]
-
-    # Create a shorter directory name if multiple subreddits are combined
-    if '+' in subreddit:
-        subreddit_dir = "multi_subreddit"
-    else:
-        subreddit_dir = subreddit
-
-    if not exists(f"./results/{subreddit_dir}"):
-        print_substep("The 'results' folder could not be found so it was automatically created.")
-        os.makedirs(f"./results/{subreddit_dir}")
-
-    if not exists(f"./results/{subreddit_dir}/OnlyTTS") and allowOnlyTTSFolder:
-        print_substep("The 'OnlyTTS' folder could not be found so it was automatically created.")
-        os.makedirs(f"./results/{subreddit_dir}/OnlyTTS")
 
     # create a thumbnail for the video
-    settingsbackground = settings.config["settings"]["background"]
-
     if settingsbackground["background_thumbnail"]:
-        if not exists(f"./results/{subreddit_dir}/thumbnails"):
+        if not exists(f"{subreddit_path}/thumbnails"):
             print_substep(
                 "The 'results/thumbnails' folder could not be found so it was automatically created."
             )
-            os.makedirs(f"./results/{subreddit_dir}/thumbnails")
+            os.makedirs(f"{subreddit_path}/thumbnails")
         # get the first file with the .png extension from assets/backgrounds and use it as a background for the thumbnail
         first_image = next(
             (file for file in os.listdir("assets/backgrounds") if file.endswith(".png")),
@@ -420,7 +496,7 @@ def make_final_video(
         old_percentage = pbar.n
         pbar.update(status - old_percentage)
 
-    defaultPath = f"results/{subreddit_dir}"
+    defaultPath = subreddit_path
     with ProgressFfmpeg(length, on_update_example) as progress:
         path = defaultPath + f"/{filename}"
         path = (
@@ -450,7 +526,7 @@ def make_final_video(
     old_percentage = pbar.n
     pbar.update(100 - old_percentage)
     if allowOnlyTTSFolder:
-        path = defaultPath + f"/OnlyTTS/{filename}"
+        path = f"{subreddit_path}/OnlyTTS/{filename}"
         path = (
             path[:251] + ".mp4"
         )  # Prevent a error by limiting the path length, do not change this.
@@ -486,3 +562,5 @@ def make_final_video(
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")
     print_step("Done! 🎉 The video is in the results folder 📁")
+    
+    return path  # Return the path to the created video file
