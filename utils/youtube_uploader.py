@@ -123,11 +123,10 @@ def get_random_publish_time() -> datetime.datetime:
     minute = random.randint(0, 59)
     return tomorrow.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> Optional[str]:
+def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> str:
     """Upload video to YouTube with scheduling."""
     if not os.path.exists(video_path):
-        print(f"Error: Video file not found at {video_path}")
-        return None
+        raise FileNotFoundError(f"Video file not found at {video_path}")
         
     try:
         print("Initializing YouTube API service...")
@@ -181,8 +180,10 @@ def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> Optional[
         return response['id']
         
     except HttpError as e:
-        print(f"An HTTP error occurred during upload: {e.resp.status} {e.content}")
-        return None
+        error_msg = f"An HTTP error occurred during upload: {e.resp.status} {e.content}"
+        print(error_msg)
+        raise Exception(error_msg)
     except Exception as e:
-        print(f"An error occurred during upload: {str(e)}")
-        return None 
+        error_msg = f"An error occurred during upload: {str(e)}"
+        print(error_msg)
+        raise Exception(error_msg) 

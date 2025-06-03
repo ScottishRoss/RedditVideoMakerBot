@@ -69,7 +69,7 @@ def main(POST_ID=None) -> None:
     if video_id:
         print_substep(f"Video uploaded successfully! Video ID: {video_id}")
     else:
-        print_substep("Failed to upload video to YouTube", style="red")
+        raise Exception("Failed to upload video to YouTube. Please check your YouTube API credentials and try again.")
 
 
 def run_many(times) -> None:

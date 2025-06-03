@@ -274,49 +274,71 @@ def make_final_video(
             print(f"Error verifying audio file {file_path}: {str(e)}")
             return False
 
-    # Add title silence
-    title_silence = f"assets/temp/{reddit_id}/mp3/title_silence.mp3"
-    if not verify_audio_file(title_silence):
-        raise Exception("Missing or invalid title silence file")
-    audio_clips.append(ffmpeg.input(title_silence))
-    audio_clips_durations = [4.0]  # 4 seconds of silence for title
+    # Add title audio
+    title_audio = f"assets/temp/{reddit_id}/mp3/title.mp3"
+    if not verify_audio_file(title_audio):
+        raise Exception("Missing or invalid title audio file")
+    
+    # Use title audio without speed modifications
+    title_clip = ffmpeg.input(title_audio)
+    audio_clips.append(title_clip)
+    
+    # Get the duration of the title audio file
+    probe = ffmpeg.probe(title_audio)
+    original_duration = float(probe["format"]["duration"])
+    audio_clips_durations = [original_duration]
 
+    # Add all other audio clips without speed adjustment
     if settings.config["settings"]["storymode"]:
         if settings.config["settings"]["storymodemethod"] == 0:
+            # Single post method
             audio_file = f"assets/temp/{reddit_id}/mp3/post.mp3"
             if not verify_audio_file(audio_file):
                 raise Exception(f"Missing or invalid audio file: {audio_file}")
-            audio_clips.append(ffmpeg.input(audio_file))
-            audio_clips_durations.append(
-                float(ffmpeg.probe(audio_file)["format"]["duration"])
-            )
+            
+            audio_clip = ffmpeg.input(audio_file)
+            audio_clips.append(audio_clip)
+            
+            # Get the duration of the original audio file
+            probe = ffmpeg.probe(audio_file)
+            original_duration = float(probe["format"]["duration"])
+            audio_clips_durations.append(original_duration)
         elif settings.config["settings"]["storymodemethod"] == 1:
+            # Multiple post method
             for i in range(number_of_clips):
                 audio_file = f"assets/temp/{reddit_id}/mp3/post-{i}.mp3"
                 if not verify_audio_file(audio_file):
                     raise Exception(f"Missing or invalid audio file: {audio_file}")
-                audio_clips.append(ffmpeg.input(audio_file))
-                audio_clips_durations.append(
-                    float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/post-{i}.mp3")["format"]["duration"])
-                )
+                
+                audio_clip = ffmpeg.input(audio_file)
+                audio_clips.append(audio_clip)
+                
+                # Get the duration of the original audio file
+                probe = ffmpeg.probe(audio_file)
+                original_duration = float(probe["format"]["duration"])
+                audio_clips_durations.append(original_duration)
     else:
-        for i in range(number_of_clips):
+        # Comment mode
+        for i in range(0, number_of_clips):
             audio_file = f"assets/temp/{reddit_id}/mp3/{i}.mp3"
             if not verify_audio_file(audio_file):
                 raise Exception(f"Missing or invalid audio file: {audio_file}")
-            audio_clips.append(ffmpeg.input(audio_file))
-            audio_clips_durations.append(
-                float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/{i}.mp3")["format"]["duration"])
-            )
+            
+            audio_clip = ffmpeg.input(audio_file)
+            audio_clips.append(audio_clip)
+            
+            # Get the duration of the original audio file
+            probe = ffmpeg.probe(audio_file)
+            original_duration = float(probe["format"]["duration"])
+            audio_clips_durations.append(original_duration)
 
-    # Add ending audio
+    # Add ending audio without speed adjustment
     ending_audio = f"assets/temp/{reddit_id}/mp3/ending.mp3"
     if not verify_audio_file(ending_audio):
         raise Exception("Missing or invalid ending audio file")
-    audio_clips.append(ffmpeg.input(ending_audio))
-    audio_clips_durations.append(
-        float(ffmpeg.probe(ending_audio)["format"]["duration"])
-    )
+    
+    ending_clip = ffmpeg.input(ending_audio)
+    audio_clips.append(ending_clip)
 
     # Concatenate audio with error handling
     try:
@@ -485,6 +507,30 @@ def make_final_video(
         fontcolor="White",
         fontfile=os.path.join("fonts", "Roboto-Regular.ttf"),
     )
+
+    # Add progress bar
+    # First draw the background bar
+    background_clip = ffmpeg.drawbox(
+        background_clip,
+        x="0",
+        y="(h-10)",  # 10 pixels from bottom
+        width="iw",  # Use input width
+        height="5",  # 5 pixels height
+        color="black@0.5",  # Semi-transparent black
+        t="fill"
+    )
+    
+    # Then draw the progress bar that fills up
+    background_clip = ffmpeg.drawbox(
+        background_clip,
+        x="0",
+        y="(h-10)",  # 10 pixels from bottom
+        width="(iw*t/67)",  # Dynamic width based on current time (67 seconds total)
+        height="5",  # 5 pixels height
+        color="white@0.8",  # Semi-transparent white
+        t="fill"
+    )
+
     background_clip = background_clip.filter("scale", W, H)
     print_step("Rendering the video 🎥")
     from tqdm import tqdm

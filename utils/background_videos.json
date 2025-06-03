@@ -1,63 +1,123 @@
 {
-    "__comment": "Supported Backgrounds. Can add/remove background video here...",
-    "motor-gta": [
-        "https://www.youtube.com/watch?v=vw5L4xCPy9Q",
-        "bike-parkour-gta.mp4",
-        "Achy Gaming",
-        "center"
-    ],
-    "rocket-league": [
-        "https://www.youtube.com/watch?v=2X9QGY__0II",
-        "rocket_league.mp4",
-        "Orbital Gameplay",
-        "center"
-    ],
-    "minecraft": [
-        "https://www.youtube.com/watch?v=n_Dv4JMiwK8",
-        "parkour.mp4",
-        "bbswitzer",
-        "center"
-    ],
-    "gta": [
-        "https://www.youtube.com/watch?v=qGa9kWREOnE",
-        "gta-stunt-race.mp4",
-        "Achy Gaming",
-        "center"
-    ],
-    "csgo-surf": [
-        "https://www.youtube.com/watch?v=E-8JlyO59Io",
-        "csgo-surf.mp4",
-        "Aki",
-        "center"
-    ],
-    "cluster-truck": [
-        "https://www.youtube.com/watch?v=uVKxtdMgJVU",
-        "cluster_truck.mp4",
-        "No Copyright Gameplay",
-        "center"
-    ],
-    "minecraft-2": [
-        "https://www.youtube.com/watch?v=Pt5_GSKIWQM",
-        "minecraft-2.mp4",
-        "Itslpsn",
-        "center"
-    ],
-    "multiversus": [
-        "https://www.youtube.com/watch?v=66oK1Mktz6g",
-        "multiversus.mp4",
-        "MKIceAndFire",
-        "center"
-    ],
-    "fall-guys": [
-        "https://www.youtube.com/watch?v=oGSsgACIc6Q",
-        "fall-guys.mp4",
-        "Throneful",
-        "center"
-    ],
-    "steep": [
-        "https://www.youtube.com/watch?v=EnGiQrWBrko",
-        "steep.mp4",
-        "joel",
-        "center"
-    ]
+  "__comment": "Supported Backgrounds. Can add/remove background video here...",
+  "motor-gta": [
+    "https://www.youtube.com/watch?v=vw5L4xCPy9Q",
+    "bike-parkour-gta.mp4",
+    "Achy Gaming",
+    "center"
+  ],
+  "rocket-league": [
+    "https://www.youtube.com/watch?v=2X9QGY__0II",
+    "rocket_league.mp4",
+    "Orbital Gameplay",
+    "center"
+  ],
+  "minecraft": [
+    "https://www.youtube.com/watch?v=n_Dv4JMiwK8",
+    "parkour.mp4",
+    "bbswitzer",
+    "center"
+  ],
+  "gta": [
+    "https://www.youtube.com/watch?v=qGa9kWREOnE",
+    "gta-stunt-race.mp4",
+    "Achy Gaming",
+    "center"
+  ],
+  "csgo-surf": [
+    "https://www.youtube.com/watch?v=E-8JlyO59Io",
+    "csgo-surf.mp4",
+    "Aki",
+    "center"
+  ],
+  "cluster-truck": [
+    "https://www.youtube.com/watch?v=uVKxtdMgJVU",
+    "cluster_truck.mp4",
+    "No Copyright Gameplay",
+    "center"
+  ],
+  "minecraft-2": [
+    "https://www.youtube.com/watch?v=Pt5_GSKIWQM",
+    "minecraft-2.mp4",
+    "Itslpsn",
+    "center"
+  ],
+  "multiversus": [
+    "https://www.youtube.com/watch?v=66oK1Mktz6g",
+    "multiversus.mp4",
+    "MKIceAndFire",
+    "center"
+  ],
+  "fall-guys": [
+    "https://www.youtube.com/watch?v=oGSsgACIc6Q",
+    "fall-guys.mp4",
+    "Throneful",
+    "center"
+  ],
+  "steep": [
+    "https://www.youtube.com/watch?v=EnGiQrWBrko",
+    "steep.mp4",
+    "joel",
+    "center"
+  ],
+  "satisfying-baking": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "satisfying-baking.mp4",
+    "Satisfying Videos",
+    "center"
+  ],
+  "rainbow-cake": [
+    "https://www.youtube.com/watch?v=2V9iX9-d0rY",
+    "rainbow-cake.mp4",
+    "Cake Decorating",
+    "center"
+  ],
+  "satisfying-slime": [
+    "https://www.youtube.com/watch?v=GJ98Iydc54k",
+    "satisfying-slime.mp4",
+    "Satisfying Slime",
+    "center"
+  ],
+  "kinetic-sand": [
+    "https://www.youtube.com/watch?v=3MqYE2UuN24",
+    "kinetic-sand.mp4",
+    "Satisfying Videos",
+    "center"
+  ],
+  "crystal-making": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "crystal-making.mp4",
+    "Crystal Art",
+    "center"
+  ],
+  "satisfying-cutting": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "satisfying-cutting.mp4",
+    "Satisfying Videos",
+    "center"
+  ],
+  "watercolor-painting": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "watercolor-painting.mp4",
+    "Art Videos",
+    "center"
+  ],
+  "satisfying-asmr": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "satisfying-asmr.mp4",
+    "ASMR Videos",
+    "center"
+  ],
+  "satisfying-crafts": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "satisfying-crafts.mp4",
+    "Craft Videos",
+    "center"
+  ],
+  "satisfying-food": [
+    "https://www.youtube.com/watch?v=8Gv0H-vPoDc",
+    "satisfying-food.mp4",
+    "Food Videos",
+    "center"
+  ]
 }

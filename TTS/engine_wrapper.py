@@ -84,15 +84,9 @@ class TTSEngine:
                     self.reddit_object["comments"][idx]["comment_body"].encode("ascii", "ignore").decode()
                 )
 
-        # Create longer silence for title display (4 seconds)
-        silence = AudioClip(
-            make_frame=lambda t: np.sin(440 * 2 * np.pi * t),
-            duration=4.0,
-            fps=44100,
-        )
-        silence = volumex(silence, 0)
-        silence.write_audiofile(f"{self.path}/title_silence.mp3", fps=44100, verbose=False, logger=None)
-        self.length += 4.0  # Add the silence duration to total length
+        # Generate title audio
+        title_text = process_text(self.reddit_object["thread_title"])
+        self.call_tts("title", title_text)
 
         # Generate content audio
         if settings.config["settings"]["storymode"]:
