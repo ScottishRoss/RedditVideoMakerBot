@@ -17,14 +17,29 @@ def load_background_options():
     background_options = {}
     # Load background videos
     with open("./utils/background_videos.json") as json_file:
-        background_options["video"] = json.load(json_file)
+        all_videos = json.load(json_file)
+        # Only keep videos that are known to work
+        working_videos = {
+            "motor-gta": all_videos["motor-gta"],
+            "rocket-league": all_videos["rocket-league"],
+            "minecraft": all_videos["minecraft"],
+            "gta": all_videos["gta"],
+            "csgo-surf": all_videos["csgo-surf"],
+            "cluster-truck": all_videos["cluster-truck"],
+            "minecraft-2": all_videos["minecraft-2"],
+            "multiversus": all_videos["multiversus"],
+            "fall-guys": all_videos["fall-guys"],
+            "steep": all_videos["steep"],
+            "satisfying-crafts": all_videos["satisfying-crafts"],
+            "satisfying-food": all_videos["satisfying-food"],
+        }
+        background_options["video"] = working_videos
 
     # Load background audios
     with open("./utils/background_audios.json") as json_file:
         background_options["audio"] = json.load(json_file)
 
     # Remove "__comment" from backgrounds
-    del background_options["video"]["__comment"]
     del background_options["audio"]["__comment"]
 
     for name in list(background_options["video"].keys()):
@@ -78,8 +93,19 @@ def download_background_video(background_config: Tuple[str, str, str, Any]):
     Path("./assets/backgrounds/video/").mkdir(parents=True, exist_ok=True)
     # note: make sure the file name doesn't include an - in it
     uri, filename, credit, _ = background_config
-    if Path(f"assets/backgrounds/video/{credit}-{filename}").is_file():
-        return
+    output_path = f"assets/backgrounds/video/{credit}-{filename}"
+    
+    # Check if file already exists and is valid
+    if Path(output_path).is_file():
+        try:
+            # Verify the file is a valid video file
+            with VideoFileClip(output_path) as clip:
+                if clip.duration > 0:
+                    return
+        except Exception:
+            # If file is invalid, remove it and download again
+            Path(output_path).unlink()
+    
     print_step(
         "We need to download the backgrounds videos. they are fairly large but it's only done once. 😎"
     )
@@ -87,13 +113,70 @@ def download_background_video(background_config: Tuple[str, str, str, Any]):
     print_substep(f"Downloading {filename} from {uri}")
     ydl_opts = {
         "format": "best[height<=1080][ext=mp4]/best[height<=1080]/best",
-        "outtmpl": f"assets/backgrounds/video/{credit}-{filename}",
+        "outtmpl": output_path,
         "retries": 10,
+        "quiet": True,
+        "no_warnings": True,
+        # Add more robust options to handle restrictions
+        "nocheckcertificate": True,
+        "ignoreerrors": True,
+        "no_color": True,
+        "geo_bypass": True,
+        "geo_verification_proxy": None,
+        # Additional options to bypass restrictions
+        "extractor_args": {
+            "youtube": {
+                "skip": ["dash", "hls"],
+                "player_client": ["android", "web"],
+                "player_skip": ["js", "configs", "webpage"]
+            }
+        },
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache"
+        }
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download(uri)
-    print_substep("Background video downloaded successfully! 🎉", style="bold green")
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # First try to extract info to verify video is accessible
+            info = ydl.extract_info(uri, download=False)
+            if not info:
+                raise Exception("Could not extract video information")
+                
+            # Then download the video
+            ydl.download(uri)
+            
+        # Verify the download was successful
+        if not Path(output_path).is_file():
+            raise Exception("Download completed but file not found")
+            
+        # Verify the file is a valid video
+        with VideoFileClip(output_path) as clip:
+            if clip.duration <= 0:
+                raise Exception("Downloaded file is not a valid video")
+                
+        print_substep("Background video downloaded successfully! 🎉", style="bold green")
+    except Exception as e:
+        error_msg = f"Failed to download background video: {str(e)}"
+        print_substep(error_msg, style="bold red")
+        print_substep("This video may be private, deleted, or no longer available.", style="bold red")
+        print_substep("Please try a different background video in your config.toml file.", style="bold red")
+        # Clean up any partial download
+        if Path(output_path).is_file():
+            Path(output_path).unlink()
+        raise Exception(error_msg)
 
 
 def download_background_audio(background_config: Tuple[str, str, str]):
@@ -101,23 +184,91 @@ def download_background_audio(background_config: Tuple[str, str, str]):
     Path("./assets/backgrounds/audio/").mkdir(parents=True, exist_ok=True)
     # note: make sure the file name doesn't include an - in it
     uri, filename, credit = background_config
-    if Path(f"assets/backgrounds/audio/{credit}-{filename}").is_file():
-        return
+    output_path = f"./assets/backgrounds/audio/{credit}-{filename}"
+    
+    # Check if file already exists and is valid
+    if Path(output_path).is_file():
+        try:
+            # Verify the file is a valid audio file
+            with AudioFileClip(output_path) as clip:
+                if clip.duration > 0:
+                    return
+        except Exception:
+            # If file is invalid, remove it and download again
+            Path(output_path).unlink()
+    
     print_step(
         "We need to download the backgrounds audio. they are fairly large but it's only done once. 😎"
     )
     print_substep("Downloading the backgrounds audio... please be patient 🙏 ")
     print_substep(f"Downloading {filename} from {uri}")
     ydl_opts = {
-        "outtmpl": f"./assets/backgrounds/audio/{credit}-{filename}",
+        "outtmpl": output_path,
         "format": "bestaudio/best",
         "extract_audio": True,
+        "retries": 10,
+        "quiet": True,
+        "no_warnings": True,
+        # Add more robust options to handle restrictions
+        "nocheckcertificate": True,
+        "ignoreerrors": True,
+        "no_color": True,
+        "geo_bypass": True,
+        "geo_verification_proxy": None,
+        # Additional options to bypass restrictions
+        "extractor_args": {
+            "youtube": {
+                "skip": ["dash", "hls"],
+                "player_client": ["android", "web"],
+                "player_skip": ["js", "configs", "webpage"]
+            }
+        },
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache"
+        }
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([uri])
-
-    print_substep("Background audio downloaded successfully! 🎉", style="bold green")
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # First try to extract info to verify video is accessible
+            info = ydl.extract_info(uri, download=False)
+            if not info:
+                raise Exception("Could not extract video information")
+                
+            # Then download the audio
+            ydl.download([uri])
+            
+        # Verify the download was successful
+        if not Path(output_path).is_file():
+            raise Exception("Download completed but file not found")
+            
+        # Verify the file is a valid audio file
+        with AudioFileClip(output_path) as clip:
+            if clip.duration <= 0:
+                raise Exception("Downloaded file is not a valid audio file")
+                
+        print_substep("Background audio downloaded successfully! 🎉", style="bold green")
+    except Exception as e:
+        error_msg = f"Failed to download background audio: {str(e)}"
+        print_substep(error_msg, style="bold red")
+        print_substep("This audio may be private, deleted, or no longer available.", style="bold red")
+        print_substep("Please try a different background audio in your config.toml file.", style="bold red")
+        # Clean up any partial download
+        if Path(output_path).is_file():
+            Path(output_path).unlink()
+        raise Exception(error_msg)
 
 
 def chop_background(background_config: Dict[str, Tuple], video_length: int, reddit_object: dict):
