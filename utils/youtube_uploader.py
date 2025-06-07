@@ -61,7 +61,12 @@ def get_authenticated_service():
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
     # Sanitize the title to ensure it's valid for YouTube
-    reddit_title = re.sub(r'[^\w\s-]', '', reddit_title)  # Remove special characters except spaces and hyphens
+    reddit_title = re.sub(r'[?\\"%*:|<>]', '', reddit_title)  # Remove special characters
+    reddit_title = re.sub(r"( [w,W]\s?\/\s?[o,O,0])", r" without", reddit_title)
+    reddit_title = re.sub(r"( [w,W]\s?\/)", r" with", reddit_title)
+    reddit_title = re.sub(r"(\d+)\s?\/\s?(\d+)", r"\1 of \2", reddit_title)
+    reddit_title = re.sub(r"(\w+)\s?\/\s?(\w+)", r"\1 or \2", reddit_title)
+    reddit_title = re.sub(r"\/", r"", reddit_title)
     reddit_title = reddit_title.strip()  # Remove leading/trailing whitespace
     
     # Filter profanity from the title
@@ -70,50 +75,46 @@ def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     if not reddit_title:  # If title is empty after sanitization, use a default
         reddit_title = "Reddit Story"
     
-    # Title templates for different subreddits
-    templates = {
-        'AskReddit': [
-            "🔥 {title} | Reddit Stories",
-            "😱 {title} | Reddit's Most Shocking Stories",
-            "🤔 {title} | Reddit's Best Responses",
-            "💭 {title} | Reddit's Most Thought-Provoking Answers",
-            "👀 {title} | Reddit's Most Interesting Stories"
-        ],
-        'AmItheAsshole': [
-            "⚖️ {title} | Reddit's Most Controversial Stories",
-            "😤 {title} | Reddit's Most Heated Debates",
-            "🤯 {title} | Reddit's Most Shocking Confessions",
-            "💔 {title} | Reddit's Most Emotional Stories",
-            "👊 {title} | Reddit's Most Intense Arguments"
-        ],
-        'tifu': [
-            "😅 {title} | Reddit's Most Hilarious Fails",
-            "🤦‍♂️ {title} | Reddit's Most Embarrassing Moments",
-            "😱 {title} | Reddit's Most Epic Fails",
-            "💀 {title} | Reddit's Most Cringeworthy Stories",
-            "🤣 {title} | Reddit's Most Funny Mishaps"
-        ],
-        'relationships': [
-            "❤️ {title} | Reddit's Most Heartwarming Stories",
-            "💔 {title} | Reddit's Most Emotional Stories",
-            "💑 {title} | Reddit's Most Touching Moments",
-            "💘 {title} | Reddit's Most Romantic Stories",
-            "💕 {title} | Reddit's Most Beautiful Love Stories"
-        ]
-    }
+    # Generate relevant hashtags based on the title and subreddit
+    hashtags = []
     
-    # Get template list for the subreddit or use a default one
-    template_list = templates.get(subreddit, [
-        "🎥 {title} | Reddit Stories",
-        "📱 {title} | Reddit's Best Stories",
-        "💫 {title} | Reddit's Most Interesting Stories",
-        "🌟 {title} | Reddit's Most Engaging Stories",
-        "✨ {title} | Reddit's Most Popular Stories"
-    ])
+    # Add subreddit-specific hashtag
+    if subreddit == 'AskReddit':
+        hashtags.append('#AskReddit')
+    elif subreddit == 'AmItheAsshole':
+        hashtags.append('#AITA')
+    elif subreddit == 'tifu':
+        hashtags.append('#TIFU')
+    elif subreddit == 'relationships':
+        hashtags.append('#Relationships')
+    else:
+        hashtags.append(f'#{subreddit}')
     
-    # Select a random template and format it
-    template = random.choice(template_list)
-    return template.format(title=reddit_title)
+    # Add one more relevant hashtag based on title content
+    title_lower = reddit_title.lower()
+    if any(word in title_lower for word in ['childhood', 'kid', 'young', 'growing up']):
+        hashtags.append('#ChildhoodMemories')
+    elif any(word in title_lower for word in ['school', 'college', 'university', 'student']):
+        hashtags.append('#SchoolLife')
+    elif any(word in title_lower for word in ['work', 'job', 'career', 'office']):
+        hashtags.append('#WorkLife')
+    elif any(word in title_lower for word in ['family', 'parent', 'mom', 'dad', 'sibling']):
+        hashtags.append('#FamilyLife')
+    elif any(word in title_lower for word in ['friend', 'friendship', 'buddy']):
+        hashtags.append('#Friendship')
+    elif any(word in title_lower for word in ['love', 'relationship', 'dating', 'boyfriend', 'girlfriend']):
+        hashtags.append('#Love')
+    elif any(word in title_lower for word in ['money', 'rich', 'poor', 'wealth', 'finance']):
+        hashtags.append('#Money')
+    elif any(word in title_lower for word in ['food', 'eat', 'cook', 'restaurant']):
+        hashtags.append('#Food')
+    elif any(word in title_lower for word in ['travel', 'trip', 'vacation', 'holiday']):
+        hashtags.append('#Travel')
+    else:
+        hashtags.append('#RedditStories')
+    
+    # Format the title with hashtags
+    return f"{reddit_title} | {' '.join(hashtags)}"
 
 def generate_description(reddit_title: str, subreddit: str, reddit_id: str) -> str:
     """Generate an engaging description for the YouTube video."""

@@ -1,5 +1,8 @@
 {
-    "smtp_username": "ross.scottish@gmail.com",
-    "smtp_password": "kqzg lugg ndtq ditp",
-    "recipient_email": "ross.scottish@gmail.com"
+  "smtp_username": "ross.scottish@gmail.com",
+  "smtp_password": "kqzg lugg ndtq ditp",
+  "recipient_email": "ross.scottish@gmail.com",
+  "sender_email": "ross.scottish@gmail.com",
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587
 }

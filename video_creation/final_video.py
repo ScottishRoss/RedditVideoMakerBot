@@ -68,12 +68,19 @@ class ProgressFfmpeg(threading.Thread):
 
 
 def name_normalize(name: str) -> str:
+    # Preserve spaces by replacing them with a temporary marker
+    name = name.replace(" ", "___SPACE___")
+    
+    # Remove special characters
     name = re.sub(r'[?\\"%*:|<>]', "", name)
     name = re.sub(r"( [w,W]\s?\/\s?[o,O,0])", r" without", name)
     name = re.sub(r"( [w,W]\s?\/)", r" with", name)
     name = re.sub(r"(\d+)\s?\/\s?(\d+)", r"\1 of \2", name)
     name = re.sub(r"(\w+)\s?\/\s?(\w+)", r"\1 or \2", name)
     name = re.sub(r"\/", r"", name)
+
+    # Restore spaces
+    name = name.replace("___SPACE___", " ")
 
     lang = settings.config["reddit"]["thread"]["post_lang"]
     if lang:
@@ -88,7 +95,8 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
     output_path = f"assets/temp/{reddit_id}/background_noaudio.mp4"
     output = (
         ffmpeg.input(f"assets/temp/{reddit_id}/background.mp4")
-        .filter("crop", f"ih*({W}/{H})", "ih")
+        .filter("scale", W, H, force_original_aspect_ratio="increase")
+        .filter("crop", W, H)
         .output(
             output_path,
             an=None,
@@ -176,10 +184,18 @@ def merge_background_audio(audio: ffmpeg, reddit_id: str):
     if background_audio_volume == 0:
         return audio  # Return the original audio
     else:
+        # Ensure volume is a valid float
+        try:
+            volume = float(background_audio_volume)
+            if volume < 0 or volume > 1:
+                volume = 0.15  # Default to 0.15 if out of range
+        except (ValueError, TypeError):
+            volume = 0.15  # Default to 0.15 if invalid
+            
         # sets volume to config
         bg_audio = ffmpeg.input(f"assets/temp/{reddit_id}/background.mp3").filter(
             "volume",
-            background_audio_volume,
+            volume,
         )
         # Merges audio and background_audio
         merged_audio = ffmpeg.filter([audio, bg_audio], "amix", duration="longest")

@@ -50,9 +50,8 @@ def get_subreddit_threads(POST_ID: str):
     # Ask user for subreddit input
     print_step("Getting subreddit threads...")
     similarity_score = 0
-    if not settings.config["reddit"]["thread"][
-        "subreddit"
-    ]:  # note to user. you can have multiple subreddits via reddit.subreddit("redditdev+learnpython")
+    sub = settings.config["reddit"]["thread"]["subreddit"]
+    if not sub or sub.strip() == "":  # Check if subreddit is empty or only whitespace
         try:
             subreddit = reddit.subreddit(
                 re.sub(r"r\/", "", input("What subreddit would you like to pull from? "))
@@ -62,7 +61,6 @@ def get_subreddit_threads(POST_ID: str):
             subreddit = reddit.subreddit("askreddit")
             print_substep("Subreddit not defined. Using AskReddit.")
     else:
-        sub = settings.config["reddit"]["thread"]["subreddit"]
         print_substep(f"Using subreddit: r/{sub} from TOML config")
         subreddit_choice = sub
         if str(subreddit_choice).casefold().startswith("r/"):  # removes the r/ from the input

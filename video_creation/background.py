@@ -12,8 +12,14 @@ from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from utils import settings
 from utils.console import print_step, print_substep
 
+# Load background options at module level
+background_options = None
 
 def load_background_options():
+    global background_options
+    if background_options is not None:
+        return background_options
+        
     background_options = {}
     # Load background videos
     with open("./utils/background_videos.json") as json_file:
@@ -74,17 +80,23 @@ def get_start_and_end_times(video_length: int, length_of_clip: int) -> Tuple[int
 
 def get_background_config(mode: str):
     """Fetch the background/s configuration"""
+    global background_options
+    if background_options is None:
+        background_options = load_background_options()
+        
+    # Force random selection if config is empty or not set
     try:
-        choice = str(settings.config["settings"]["background"][f"background_{mode}"]).casefold()
-    except AttributeError:
-        print_substep("No background selected. Picking random background")
-        choice = None
+        choice = str(settings.config["settings"]["background"][f"background_{mode}"]).strip()
+        if not choice or choice == "":
+            choice = random.choice(list(background_options[mode].keys()))
+            print_substep(f"Selected random {mode} background: {choice}")
+            return background_options[mode][choice]
+    except (AttributeError, KeyError):
+        pass
 
-    # Always pick random background unless explicitly specified
-    if not choice or choice == " " or choice not in background_options[mode]:
-        choice = random.choice(list(background_options[mode].keys()))
-        print_substep(f"Selected random {mode} background: {choice}")
-
+    # If we get here, either the config value was invalid or not found
+    choice = random.choice(list(background_options[mode].keys()))
+    print_substep(f"Selected random {mode} background: {choice}")
     return background_options[mode][choice]
 
 
