@@ -60,13 +60,21 @@ def get_authenticated_service():
 
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
-    # Sanitize the title to ensure it's valid for YouTube
-    reddit_title = re.sub(r'[?\\"%*:|<>]', '', reddit_title)  # Remove special characters
+    # First, handle common abbreviations and special cases
     reddit_title = re.sub(r"( [w,W]\s?\/\s?[o,O,0])", r" without", reddit_title)
     reddit_title = re.sub(r"( [w,W]\s?\/)", r" with", reddit_title)
     reddit_title = re.sub(r"(\d+)\s?\/\s?(\d+)", r"\1 of \2", reddit_title)
     reddit_title = re.sub(r"(\w+)\s?\/\s?(\w+)", r"\1 or \2", reddit_title)
     reddit_title = re.sub(r"\/", r"", reddit_title)
+    
+    # Add spaces between words that are stuck together
+    reddit_title = re.sub(r'([a-z])([A-Z])', r'\1 \2', reddit_title)  # Add space between camelCase
+    reddit_title = re.sub(r'([A-Z])([A-Z][a-z])', r'\1 \2', reddit_title)  # Add space between ALLCAPS and TitleCase
+    reddit_title = re.sub(r'([a-z])([0-9])', r'\1 \2', reddit_title)  # Add space between letters and numbers
+    reddit_title = re.sub(r'([0-9])([a-zA-Z])', r'\1 \2', reddit_title)  # Add space between numbers and letters
+    
+    # Remove special characters but keep spaces
+    reddit_title = re.sub(r'[?\\"%*:|<>]', '', reddit_title)
     reddit_title = reddit_title.strip()  # Remove leading/trailing whitespace
     
     # Filter profanity from the title
