@@ -1,108 +1,113 @@
-# Reddit Video Maker Bot 🎥
-
-All done WITHOUT video editing or asset compiling. Just pure ✨programming magic✨.
-
-Created by Lewis Menelaws & [TMRRW](https://tmrrwinc.ca)
-
-<a target="_blank" href="https://tmrrwinc.ca">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/6053155/170528535-e274dc0b-7972-4b27-af22-637f8c370133.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/6053155/170528582-cb6671e7-5a2f-4bd4-a048-0e6cfa54f0f7.png">
-  <img src="https://user-images.githubusercontent.com/6053155/170528582-cb6671e7-5a2f-4bd4-a048-0e6cfa54f0f7.png" width="350">
-</picture>
-
-</a>
-
-## Video Explainer
-
-[![lewisthumbnail](https://user-images.githubusercontent.com/6053155/173631669-1d1b14ad-c478-4010-b57d-d79592a789f2.png)
-](https://www.youtube.com/watch?v=3gjcY_00U1w)
-
-## Motivation 🤔
-
-These videos on TikTok, YouTube and Instagram get MILLIONS of views across all platforms and require very little effort.
-The only original thing being done is the editing and gathering of all materials...
-
-... but what if we can automate that process? 🤔
-
-## Disclaimers 🚨
-
-- **At the moment**, this repository won't attempt to upload this content through this bot. It will give you a file that
-  you will then have to upload manually. This is for the sake of avoiding any sort of community guideline issues.
-
 ## Requirements
 
 - Python 3.10
-- Playwright (this should install automatically in installation)
+- FFmpeg
+- Gmail account (for email notifications)
+- Reddit API credentials
+- YouTube API credentials (if uploading to YouTube)
 
-## Installation 👩‍💻
+## Installation
 
 1. Clone this repository
-2. Run `pip install -r requirements.txt`
-3. Run `python -m playwright install` and `python -m playwright install-deps`
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Install FFmpeg (if not already installed)
+4. Set up your Reddit API credentials:
+   - Visit [Reddit Apps page](https://www.reddit.com/prefs/apps)
+   - Create a new app (script type)
+   - Note down the client ID and client secret
 
-**EXPERIMENTAL!!!!**
+## Configuration
 
-On macOS and Linux (debian, arch, fedora and centos, and based on those), you can run an install script that will automatically install steps 1 to 3. (requires bash)
+1. Set up email notifications:
 
-`bash <(curl -sL https://raw.githubusercontent.com/elebumm/RedditVideoMakerBot/master/install.sh)`
+   ```bash
+   setup_email.bat
+   ```
 
-This can also be used to update the installation
+   - Enter your Gmail address
+   - Enter your Gmail App Password (not your regular password)
+   - To get an App Password:
+     1. Go to your Google Account settings
+     2. Navigate to Security
+     3. Enable 2-Step Verification if not already enabled
+     4. Go to App Passwords
+     5. Generate a new app password for "Mail"
 
-4. Run `python main.py`
-5. Visit [the Reddit Apps page.](https://www.reddit.com/prefs/apps), and set up an app that is a "script". Paste any URL in redirect URL. Ex:`https://jasoncameron.dev`
-6. The bot will ask you to fill in your details to connect to the Reddit API, and configure the bot to your liking
-7. Enjoy 😎
-8. If you need to reconfigure the bot, simply open the `config.toml` file and delete the lines that need to be changed. On the next run of the bot, it will help you reconfigure those options.
+2. Configure the bot:
+   - Edit `config.toml` with your settings
+   - Set your Reddit API credentials
+   - Configure video settings (background, voice, etc.)
 
-(Note if you got an error installing or running the bot try first rerunning the command with a three after the name e.g. python3 or pip3)
+## Running the Bot
 
-If you want to read more detailed guide about the bot, please refer to the [documentation](https://reddit-video-maker-bot.netlify.app/)
+### Automated Daily Run
 
-## Video
+1. Set up the scheduled task:
 
-https://user-images.githubusercontent.com/66544866/173453972-6526e4e6-c6ef-41c5-ab40-5d275e724e7c.mp4
+   ```bash
+   # Right-click setup_scheduler.ps1 and select "Run with PowerShell"
+   ```
 
-## Contributing & Ways to improve 📈
+   This will:
 
-In its current state, this bot does exactly what it needs to do. However, improvements can always be made!
+   - Create a daily task at 9:00 AM
+   - Run even if the computer is on battery
+   - Send email notifications for any issues
 
-I have tried to simplify the code so anyone can read it and start contributing at any skill level. Don't be shy :) contribute!
+2. Verify the setup:
+   - Task Scheduler will open automatically
+   - Look for "RedditVideoMakerBot" in the list
+   - You can modify the schedule if needed
 
-- [ ] Creating better documentation and adding a command line interface.
-- [x] Allowing the user to choose background music for their videos.
-- [x] Allowing users to choose a reddit thread instead of being randomized.
-- [x] Allowing users to choose a background that is picked instead of the Minecraft one.
-- [x] Allowing users to choose between any subreddit.
-- [x] Allowing users to change voice.
-- [x] Checks if a video has already been created
-- [x] Light and Dark modes
-- [x] NSFW post filter
+### Manual Run
 
-Please read our [contributing guidelines](CONTRIBUTING.md) for more detailed information.
+1. Run the bot directly:
 
-### For any questions or support join the [Discord](https://discord.gg/qfQSx45xCV) server
+   ```bash
+   python main.py
+   ```
 
-## Developers and maintainers.
+2. Or use the batch file:
+   ```bash
+   run_bot_daily.bat
+   ```
 
-Elebumm (Lewis#6305) - https://github.com/elebumm (Founder)
+### Testing Email Notifications
 
-Jason Cameron - https://github.com/JasonLovesDoggo (Maintainer)
+1. Run the email test:
 
-Simon (OpenSourceSimon) - https://github.com/OpenSourceSimon
+   ```bash
+   test_emails.bat
+   ```
 
-CallumIO (c.#6837) - https://github.com/CallumIO
+   This will send three test emails:
 
-Verq (Verq#2338) - https://github.com/CordlessCoder
+   - A retry attempt failure
+   - All retries exhausted
+   - An unexpected error
 
-LukaHietala (Pix.#0001) - https://github.com/LukaHietala
+2. Check your email to verify the notifications
 
-Freebiell (Freebie#3263) - https://github.com/FreebieII
+## Monitoring
 
-Aman Raza (electro199#8130) - https://github.com/electro199
+- Check `bot_run.log` for detailed logs
+- Email notifications will be sent for:
+  - Each failed attempt
+  - When all retries are exhausted
+  - Any unexpected errors
 
-Cyteon (cyteon) - https://github.com/cyteon
+## Troubleshooting
 
+1. If emails aren't working:
 
-## LICENSE
-[Roboto Fonts](https://fonts.google.com/specimen/Roboto/about) are licensed under [Apache License V2](https://www.apache.org/licenses/LICENSE-2.0)
+   - Verify your Gmail App Password
+   - Check `email_config.json` exists
+   - Run `test_emails.bat` to test
+
+2. If the bot isn't running:
+   - Check Task Scheduler
+   - Verify Python 3.10 is installed
+   - Check `bot_run.log` for errors
