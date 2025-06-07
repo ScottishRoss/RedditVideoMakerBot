@@ -13,6 +13,7 @@ from rich.progress import track
 from utils import settings
 from utils.console import print_step, print_substep
 from utils.voice import sanitize_text
+from utils.profanity_filter import filter_profanity
 
 DEFAULT_MAX_LENGTH: int = (
     50  # Video length variable, edit this on your own risk. It should work, but it's not supported
@@ -84,22 +85,29 @@ class TTSEngine:
                     self.reddit_object["comments"][idx]["comment_body"].encode("ascii", "ignore").decode()
                 )
 
-        # Generate title audio
+        # Generate title audio with profanity filtering
         title_text = process_text(self.reddit_object["thread_title"])
+        title_text = filter_profanity(title_text)
         self.call_tts("title", title_text)
 
-        # Generate content audio
+        # Generate content audio with profanity filtering
         if settings.config["settings"]["storymode"]:
             if settings.config["settings"]["storymodemethod"] == 0:
-                self.call_tts("post", process_text(self.reddit_object["thread_post"]))
+                post_text = process_text(self.reddit_object["thread_post"])
+                post_text = filter_profanity(post_text)
+                self.call_tts("post", post_text)
                 number_of_comments = 1
             elif settings.config["settings"]["storymodemethod"] == 1:
                 for idx, text in enumerate(self.reddit_object["thread_post"]):
-                    self.call_tts(f"post-{idx}", process_text(text))
+                    processed_text = process_text(text)
+                    processed_text = filter_profanity(processed_text)
+                    self.call_tts(f"post-{idx}", processed_text)
                 number_of_comments = len(self.reddit_object["thread_post"])
         else:
             for idx, comment in enumerate(self.reddit_object["comments"]):
-                self.call_tts(idx, process_text(comment["comment_body"]))
+                comment_text = process_text(comment["comment_body"])
+                comment_text = filter_profanity(comment_text)
+                self.call_tts(idx, comment_text)
             number_of_comments = len(self.reddit_object["comments"])
 
         # Generate ending audio

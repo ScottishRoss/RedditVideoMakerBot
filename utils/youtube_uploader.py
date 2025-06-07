@@ -1,6 +1,7 @@
 import os
 import random
 import datetime
+import re
 from typing import Dict, List, Optional
 
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,6 +10,8 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
+
+from utils.profanity_filter import filter_profanity
 
 # OAuth 2.0 scopes for YouTube Data API
 SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube']
@@ -57,6 +60,16 @@ def get_authenticated_service():
 
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
+    # Sanitize the title to ensure it's valid for YouTube
+    reddit_title = re.sub(r'[^\w\s-]', '', reddit_title)  # Remove special characters except spaces and hyphens
+    reddit_title = reddit_title.strip()  # Remove leading/trailing whitespace
+    
+    # Filter profanity from the title
+    reddit_title = filter_profanity(reddit_title)
+    
+    if not reddit_title:  # If title is empty after sanitization, use a default
+        reddit_title = "Reddit Story"
+    
     # Title templates for different subreddits
     templates = {
         'AskReddit': [
@@ -132,8 +145,13 @@ def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> str:
         print("Initializing YouTube API service...")
         youtube = get_authenticated_service()
         
+        # Debug logging for reddit object
+        print(f"Debug - Reddit object thread_title: {reddit_obj.get('thread_title', 'NOT FOUND')}")
+        
         # Generate title and description
         title = generate_engaging_title(reddit_obj["thread_title"], subreddit)
+        print(f"Debug - Generated title: {title}")
+        
         description = generate_description(reddit_obj["thread_title"], subreddit, reddit_obj["thread_id"])
         
         # Get random publish time
@@ -156,6 +174,9 @@ def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> str:
                 'selfDeclaredMadeForKids': False
             }
         }
+        
+        # Debug logging for request body
+        print(f"Debug - Request body title: {request_body['snippet']['title']}")
         
         # Create the media file upload object
         print("Creating media upload object...")
