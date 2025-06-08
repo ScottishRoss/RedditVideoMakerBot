@@ -55,10 +55,8 @@ def main(POST_ID=None) -> None:
     download_background_audio(bg_config["audio"])
     chop_background(bg_config, length, reddit_object)
     
-    # Get the subreddit name (handle multiple subreddits)
-    subreddit = settings.config["reddit"]["thread"]["subreddit"]
-    if '+' in subreddit:
-        subreddit = subreddit.split('+')[0]  # Use the first subreddit for title/description
+    # Get the actual selected subreddit from the reddit_object
+    subreddit = reddit_object.get("subreddit", "AskReddit")  # Default to AskReddit if not found
     
     # Create the video
     video_path = make_final_video(number_of_comments, length, reddit_object, bg_config)
