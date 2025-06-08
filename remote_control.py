@@ -12,6 +12,7 @@ from pyngrok import ngrok
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import logging
 
 app = Flask(__name__)
 
@@ -153,7 +154,7 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-# Basic HTML template
+# Update the HTML template to improve log display
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -186,6 +187,12 @@ HTML_TEMPLATE = """
             background-color: #cccccc;
             cursor: not-allowed;
         }
+        .button.secondary {
+            background-color: #2196F3;
+        }
+        .button.danger {
+            background-color: #f44336;
+        }
         .status { 
             margin: 20px 0; 
             padding: 10px; 
@@ -194,25 +201,87 @@ HTML_TEMPLATE = """
         }
         .success { background-color: #dff0d8; }
         .error { background-color: #f2dede; }
-        .log { 
-            background-color: white; 
-            padding: 10px; 
-            border-radius: 4px; 
-            max-height: 300px; 
-            overflow-y: auto;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-family: monospace;
-        }
         .container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .command-log {
+            background-color: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Consolas', 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .command-log h2 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .log-entry.command {
+            color: #4CAF50;
+        }
+        .log-entry.output {
+            color: #fff;
+            white-space: pre-wrap;
+        }
+        .log-entry.error {
+            color: #f44336;
+        }
+        .log-entry.timestamp {
+            color: #888;
+            font-size: 0.8em;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .bot-logs {
+            background-color: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Consolas', 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .bot-logs h2 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .bot-logs pre {
+            margin: 0;
+            padding: 10px;
+            color: #fff;
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
         @media (max-width: 600px) {
             .button {
                 width: 100%;
                 margin: 4px 0;
+            }
+            .button-group {
+                flex-direction: column;
             }
         }
     </style>
@@ -221,22 +290,52 @@ HTML_TEMPLATE = """
     <div class="container">
         <h1>Reddit Video Bot Control</h1>
         
-        <div>
+        <div class="button-group">
             <button class="button" onclick="startBot()" id="startButton">Start Bot</button>
+            <button class="button secondary" onclick="startScheduler()" id="startSchedulerButton">Start Scheduler</button>
+            <button class="button danger" onclick="stopBot()" id="stopButton">Stop Bot</button>
             <button class="button" onclick="checkStatus()" id="statusButton">Check Status</button>
         </div>
 
         <div id="status" class="status"></div>
         
-        <h2>Recent Logs</h2>
-        <div id="logs" class="log"></div>
+        <div class="command-log">
+            <h2>Command Log</h2>
+            <div id="commandLog"></div>
+        </div>
+        
+        <div class="bot-logs">
+            <h2>Bot Logs</h2>
+            <pre id="logs"></pre>
+        </div>
     </div>
 
     <script>
+        function addLogEntry(type, message) {
+            const logDiv = document.getElementById('commandLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const timestampSpan = document.createElement('span');
+            timestampSpan.className = 'timestamp';
+            timestampSpan.textContent = `[${timestamp}] `;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            
+            entry.appendChild(timestampSpan);
+            entry.appendChild(messageSpan);
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
         function startBot() {
             const button = document.getElementById('startButton');
             button.disabled = true;
             button.textContent = 'Starting...';
+            
+            addLogEntry('command', 'Starting bot...');
             
             fetch('/start', { 
                 method: 'POST',
@@ -248,14 +347,78 @@ HTML_TEMPLATE = """
                 .then(data => {
                     document.getElementById('status').innerHTML = 
                         `<div class="${data.success ? 'success' : 'error'}">${data.message}</div>`;
+                    addLogEntry(data.success ? 'output' : 'error', data.message);
                     button.disabled = false;
                     button.textContent = 'Start Bot';
                 })
                 .catch(error => {
                     document.getElementById('status').innerHTML = 
                         `<div class="error">Error: ${error}</div>`;
+                    addLogEntry('error', `Error: ${error}`);
                     button.disabled = false;
                     button.textContent = 'Start Bot';
+                });
+        }
+
+        function stopBot() {
+            const button = document.getElementById('stopButton');
+            button.disabled = true;
+            button.textContent = 'Stopping...';
+            
+            addLogEntry('command', 'Stopping bot...');
+            
+            fetch('/stop', { 
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa('{{ username }}:{{ password }}')
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerHTML = 
+                        `<div class="${data.success ? 'success' : 'error'}">${data.message}</div>`;
+                    addLogEntry(data.success ? 'output' : 'error', data.message);
+                    button.disabled = false;
+                    button.textContent = 'Stop Bot';
+                    checkStatus();
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = 
+                        `<div class="error">Error: ${error}</div>`;
+                    addLogEntry('error', `Error: ${error}`);
+                    button.disabled = false;
+                    button.textContent = 'Stop Bot';
+                });
+        }
+
+        function startScheduler() {
+            const button = document.getElementById('startSchedulerButton');
+            button.disabled = true;
+            button.textContent = 'Starting Scheduler...';
+            
+            addLogEntry('command', 'Starting scheduler...');
+            
+            fetch('/start_scheduler', { 
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa('{{ username }}:{{ password }}')
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerHTML = 
+                        `<div class="${data.success ? 'success' : 'error'}">${data.message}</div>`;
+                    addLogEntry(data.success ? 'output' : 'error', data.message);
+                    button.disabled = false;
+                    button.textContent = 'Start Scheduler';
+                    checkStatus();
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = 
+                        `<div class="error">Error: ${error}</div>`;
+                    addLogEntry('error', `Error: ${error}`);
+                    button.disabled = false;
+                    button.textContent = 'Start Scheduler';
                 });
         }
 
@@ -263,6 +426,8 @@ HTML_TEMPLATE = """
             const button = document.getElementById('statusButton');
             button.disabled = true;
             button.textContent = 'Checking...';
+            
+            addLogEntry('command', 'Checking status...');
             
             fetch('/status', {
                 headers: {
@@ -273,13 +438,15 @@ HTML_TEMPLATE = """
                 .then(data => {
                     document.getElementById('status').innerHTML = 
                         `<div class="${data.running ? 'success' : 'error'}">${data.message}</div>`;
-                    document.getElementById('logs').innerHTML = data.logs;
+                    document.getElementById('logs').textContent = data.logs;
+                    addLogEntry('output', data.message);
                     button.disabled = false;
                     button.textContent = 'Check Status';
                 })
                 .catch(error => {
                     document.getElementById('status').innerHTML = 
                         `<div class="error">Error: ${error}</div>`;
+                    addLogEntry('error', `Error: ${error}`);
                     button.disabled = false;
                     button.textContent = 'Check Status';
                 });
@@ -304,19 +471,51 @@ def get_bot_status():
     except:
         return False
 
-def get_recent_logs():
-    """Get the most recent logs from bot_run.log"""
+def get_logs():
+    """Get all logs from the bot log file"""
     try:
-        log_file = Path('bot_run.log')
-        if not log_file.exists():
-            return "No logs available"
-        
-        # Get last 20 lines of the log file
-        with open(log_file, 'r') as f:
-            lines = f.readlines()
-            return ''.join(lines[-20:])
+        log_file = 'bot_run.log'
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                return f.read()
+        return "No log file found"
     except Exception as e:
-        return f"Error reading logs: {str(e)}"
+        return f"Error reading log file: {str(e)}"
+
+def get_scheduled_tasks():
+    """Get information about scheduled tasks"""
+    try:
+        # Run schtasks command to get task information
+        result = subprocess.run(['schtasks', '/query', '/tn', 'RedditVideoMakerBot', '/fo', 'list', '/v'], 
+                              capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            return {
+                "status": "Not Scheduled",
+                "details": "No scheduled tasks found"
+            }
+            
+        # Parse the output to get relevant information
+        task_info = {}
+        is_running = False
+        for line in result.stdout.split('\n'):
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                task_info[key] = value
+                # Check if task is running
+                if key == "Status" and "Running" in value:
+                    is_running = True
+        
+        # Add scheduler status
+        task_info["Scheduler Status"] = "Running" if is_running else "Scheduled"
+        return task_info
+    except Exception as e:
+        return {
+            "status": "Error",
+            "details": f"Error getting scheduled tasks: {str(e)}"
+        }
 
 @app.route('/')
 @requires_auth
@@ -349,12 +548,114 @@ def start_bot():
 @app.route('/status')
 @requires_auth
 def status():
-    is_running = get_bot_status()
-    return jsonify({
-        'running': is_running,
-        'message': 'Bot is running' if is_running else 'Bot is not running',
-        'logs': get_recent_logs()
-    })
+    """Get the current status of the bot"""
+    try:
+        # Check if the bot is running
+        running = get_bot_status()
+        
+        # Get scheduled tasks info
+        scheduled_tasks = get_scheduled_tasks()
+        
+        # Get the logs
+        logs = get_logs()
+        
+        return jsonify({
+            'running': running,
+            'message': 'Bot is running' if running else 'Bot is not running',
+            'scheduled_tasks': scheduled_tasks,
+            'logs': logs
+        })
+    except Exception as e:
+        return jsonify({
+            'running': False,
+            'message': f'Error checking status: {str(e)}',
+            'scheduled_tasks': str(e),
+            'logs': str(e)
+        })
+
+@app.route('/start_scheduler', methods=['POST'])
+@requires_auth
+def start_scheduler():
+    try:
+        # Create a temporary PowerShell script that will run setup_scheduler.ps1
+        temp_script = """
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        $ErrorActionPreference = 'Stop'
+        try {
+            & "$PSScriptRoot\\setup_scheduler.ps1"
+            Write-Output "Success: Scheduler setup completed"
+        } catch {
+            Write-Error "Error: $_"
+            exit 1
+        }
+        """
+        
+        # Write the temporary script to a file
+        temp_script_path = "run_scheduler.ps1"
+        with open(temp_script_path, "w") as f:
+            f.write(temp_script)
+        
+        # Run the temporary script
+        result = subprocess.run([
+            'powershell',
+            '-NoProfile',
+            '-NonInteractive',
+            '-ExecutionPolicy', 'Bypass',
+            '-File', temp_script_path
+        ], capture_output=True, text=True)
+        
+        # Clean up the temporary script
+        try:
+            os.remove(temp_script_path)
+        except:
+            pass
+        
+        # Log the full output for debugging
+        logging.info(f"Scheduler setup output: {result.stdout}")
+        if result.stderr:
+            logging.error(f"Scheduler setup error: {result.stderr}")
+        
+        if result.returncode == 0:
+            return jsonify({
+                'success': True,
+                'message': 'Scheduler started successfully. Output: ' + result.stdout.strip()
+            })
+        else:
+            error_msg = result.stderr if result.stderr else result.stdout
+            return jsonify({
+                'success': False,
+                'message': f'Failed to start scheduler: {error_msg}'
+            })
+    except Exception as e:
+        logging.error(f"Exception in start_scheduler: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Failed to start scheduler: {str(e)}'
+        })
+
+@app.route('/stop', methods=['POST'])
+@requires_auth
+def stop_bot():
+    try:
+        # Find and stop the automated_runner.py process
+        result = subprocess.run(['taskkill', '/F', '/IM', 'python.exe', '/FI', 'WINDOWTITLE eq automated_runner.py'], 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            return jsonify({
+                'success': True,
+                'message': 'Bot stopped successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Bot is not running'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Failed to stop bot: {str(e)}'
+        })
 
 if __name__ == '__main__':
     # Get port from environment variable or use default

@@ -58,6 +58,23 @@ def get_authenticated_service():
         print(f"Error building YouTube service: {str(e)}")
         raise
 
+def get_subreddit_emoji(subreddit: str) -> str:
+    """Get the appropriate emoji for a subreddit."""
+    emoji_map = {
+        'AskReddit': '❓',
+        'AmItheAsshole': '👥',
+        'tifu': '😅',
+        'TrueOffMyChest': '💭',
+        'confession': '🤫',
+        'pettyrevenge': '😈',
+        'ProRevenge': '⚔️',
+        'MaliciousCompliance': '😏',
+        'IDontWorkHereLady': '👔',
+        'unpopularopinion': '🤔',
+        'CasualConversation': '💬'
+    }
+    return emoji_map.get(subreddit, '🔥')  # Default to fire emoji if subreddit not found
+
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
     # First, handle common abbreviations and special cases
@@ -83,46 +100,11 @@ def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     if not reddit_title:  # If title is empty after sanitization, use a default
         reddit_title = "Reddit Story"
     
-    # Generate relevant hashtags based on the title and subreddit
-    hashtags = []
+    # Get the appropriate emoji for the subreddit
+    emoji = get_subreddit_emoji(subreddit)
     
-    # Add subreddit-specific hashtag
-    if subreddit == 'AskReddit':
-        hashtags.append('#AskReddit')
-    elif subreddit == 'AmItheAsshole':
-        hashtags.append('#AITA')
-    elif subreddit == 'tifu':
-        hashtags.append('#TIFU')
-    elif subreddit == 'relationships':
-        hashtags.append('#Relationships')
-    else:
-        hashtags.append(f'#{subreddit}')
-    
-    # Add one more relevant hashtag based on title content
-    title_lower = reddit_title.lower()
-    if any(word in title_lower for word in ['childhood', 'kid', 'young', 'growing up']):
-        hashtags.append('#ChildhoodMemories')
-    elif any(word in title_lower for word in ['school', 'college', 'university', 'student']):
-        hashtags.append('#SchoolLife')
-    elif any(word in title_lower for word in ['work', 'job', 'career', 'office']):
-        hashtags.append('#WorkLife')
-    elif any(word in title_lower for word in ['family', 'parent', 'mom', 'dad', 'sibling']):
-        hashtags.append('#FamilyLife')
-    elif any(word in title_lower for word in ['friend', 'friendship', 'buddy']):
-        hashtags.append('#Friendship')
-    elif any(word in title_lower for word in ['love', 'relationship', 'dating', 'boyfriend', 'girlfriend']):
-        hashtags.append('#Love')
-    elif any(word in title_lower for word in ['money', 'rich', 'poor', 'wealth', 'finance']):
-        hashtags.append('#Money')
-    elif any(word in title_lower for word in ['food', 'eat', 'cook', 'restaurant']):
-        hashtags.append('#Food')
-    elif any(word in title_lower for word in ['travel', 'trip', 'vacation', 'holiday']):
-        hashtags.append('#Travel')
-    else:
-        hashtags.append('#RedditStories')
-    
-    # Format the title with hashtags
-    return f"{reddit_title} | {' '.join(hashtags)}"
+    # Format the title with subreddit-specific emoji and hashtags
+    return f"{emoji}{reddit_title} | #{subreddit} #RedditStories"
 
 def generate_description(reddit_title: str, subreddit: str, reddit_id: str) -> str:
     """Generate an engaging description for the YouTube video."""

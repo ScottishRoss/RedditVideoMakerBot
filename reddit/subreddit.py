@@ -1,4 +1,5 @@
 import re
+import random
 
 import praw
 from praw.models import MoreComments
@@ -15,7 +16,7 @@ from utils.voice import sanitize_text
 
 def get_subreddit_threads(POST_ID: str):
     """
-    Returns a list of threads from the AskReddit subreddit.
+    Returns a list of threads from the selected subreddit.
     """
 
     print_substep("Logging into Reddit.")
@@ -61,11 +62,13 @@ def get_subreddit_threads(POST_ID: str):
             subreddit = reddit.subreddit("askreddit")
             print_substep("Subreddit not defined. Using AskReddit.")
     else:
-        print_substep(f"Using subreddit: r/{sub} from TOML config")
-        subreddit_choice = sub
-        if str(subreddit_choice).casefold().startswith("r/"):  # removes the r/ from the input
-            subreddit_choice = subreddit_choice[2:]
-        subreddit = reddit.subreddit(subreddit_choice)
+        # Split the subreddit string into a list and randomly select one
+        subreddits = [s.strip() for s in sub.split('+')]
+        selected_subreddit = random.choice(subreddits)
+        print_substep(f"Using subreddit: r/{selected_subreddit} from TOML config")
+        if str(selected_subreddit).casefold().startswith("r/"):  # removes the r/ from the input
+            selected_subreddit = selected_subreddit[2:]
+        subreddit = reddit.subreddit(selected_subreddit)
 
     if POST_ID:  # would only be called if there are multiple queued posts
         submission = reddit.submission(id=POST_ID)
