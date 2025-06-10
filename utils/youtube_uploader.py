@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
 
-from utils.profanity_filter import filter_profanity
+from utils.content_filter import sanitize_text, is_advertiser_friendly, get_content_warnings
 
 # OAuth 2.0 scopes for YouTube Data API
 SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube']
@@ -80,23 +80,71 @@ def get_subreddit_emoji(subreddit: str) -> str:
 
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
-    # Filter profanity from the title
-    reddit_title = filter_profanity(reddit_title)
+    # Sanitize the title first
+    sanitized_title = re.sub(r'[^\w\s-]', '', reddit_title).strip()
+    if not sanitized_title:
+        sanitized_title = "Reddit Story"  # Fallback title if sanitization results in empty string
     
-    if not reddit_title:  # If title is empty after sanitization, use a default
-        reddit_title = "Reddit Story"
+    # Apply content filtering
+    sanitized_title = sanitize_text(sanitized_title)
     
-    # Get the appropriate emoji for the subreddit
-    emoji = get_subreddit_emoji(subreddit)
+    # Title templates for different subreddits
+    templates = {
+        'AskReddit': [
+            "🔥 {title} | Reddit Stories",
+            "😱 {title} | Reddit's Most Shocking Stories",
+            "🤔 {title} | Reddit's Best Responses",
+            "💭 {title} | Reddit's Most Thought-Provoking Answers",
+            "👀 {title} | Reddit's Most Interesting Stories"
+        ],
+        'AmItheAsshole': [
+            "⚖️ {title} | Reddit's Most Controversial Stories",
+            "😤 {title} | Reddit's Most Heated Debates",
+            "🤯 {title} | Reddit's Most Shocking Confessions",
+            "💔 {title} | Reddit's Most Emotional Stories",
+            "👊 {title} | Reddit's Most Intense Arguments"
+        ],
+        'tifu': [
+            "😅 {title} | Reddit's Most Hilarious Fails",
+            "🤦‍♂️ {title} | Reddit's Most Embarrassing Moments",
+            "😱 {title} | Reddit's Most Epic Fails",
+            "💀 {title} | Reddit's Most Cringeworthy Stories",
+            "🤣 {title} | Reddit's Most Funny Mishaps"
+        ],
+        'relationships': [
+            "❤️ {title} | Reddit's Most Heartwarming Stories",
+            "💔 {title} | Reddit's Most Emotional Stories",
+            "💑 {title} | Reddit's Most Touching Moments",
+            "💘 {title} | Reddit's Most Romantic Stories",
+            "💕 {title} | Reddit's Most Beautiful Love Stories"
+        ]
+    }
     
-    # Format the title with subreddit-specific emoji and hashtags
-    return f"{emoji} {reddit_title} | #{subreddit} #RedditStories"
+    # Get template list for the subreddit or use a default one
+    template_list = templates.get(subreddit, [
+        "🎥 {title} | Reddit Stories",
+        "📱 {title} | Reddit's Best Stories",
+        "💫 {title} | Reddit's Most Interesting Stories",
+        "🌟 {title} | Reddit's Most Engaging Stories",
+        "✨ {title} | Reddit's Most Popular Stories"
+    ])
+    
+    # Select a random template and format it
+    template = random.choice(template_list)
+    return template.format(title=sanitized_title)
 
 def generate_description(reddit_title: str, subreddit: str, reddit_id: str) -> str:
     """Generate an engaging description for the YouTube video."""
-    description = f"""🔥 {reddit_title}
+    # Apply content filtering to the title
+    sanitized_title = sanitize_text(reddit_title)
+    
+    # Get content warnings if any
+    warnings = get_content_warnings(reddit_title)
+    warning_text = "\n⚠️ " + "\n⚠️ ".join(warnings) + "\n\n" if warnings else ""
+    
+    description = f"""🔥 {sanitized_title}
 
-💬 Join the conversation in the comments below!
+{warning_text}💬 Join the conversation in the comments below!
 
 🔔 Subscribe and turn on notifications to never miss a story!
 
@@ -130,6 +178,10 @@ def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> str:
         print(f"Debug - Generated title: {title}")
         
         description = generate_description(reddit_obj["thread_title"], subreddit, reddit_obj["thread_id"])
+        
+        # Check if content is advertiser-friendly
+        if not is_advertiser_friendly(reddit_obj["thread_title"]):
+            print("Warning: Content may not be advertiser-friendly. Consider reviewing before publishing.")
         
         # Get random publish time
         publish_time = get_random_publish_time()
