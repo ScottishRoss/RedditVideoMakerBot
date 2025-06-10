@@ -1,6 +1,7 @@
 import os
 import random
 import datetime
+import re
 from typing import Dict, List, Optional
 
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,6 +10,8 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
+
+from utils.content_filter import sanitize_text, is_advertiser_friendly, get_content_warnings
 
 # OAuth 2.0 scopes for YouTube Data API
 SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube']
@@ -57,6 +60,14 @@ def get_authenticated_service():
 
 def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     """Generate an engaging title for the YouTube video."""
+    # Sanitize the title first
+    sanitized_title = re.sub(r'[^\w\s-]', '', reddit_title).strip()
+    if not sanitized_title:
+        sanitized_title = "Reddit Story"  # Fallback title if sanitization results in empty string
+    
+    # Apply content filtering
+    sanitized_title = sanitize_text(sanitized_title)
+    
     # Title templates for different subreddits
     templates = {
         'AskReddit': [
@@ -100,13 +111,20 @@ def generate_engaging_title(reddit_title: str, subreddit: str) -> str:
     
     # Select a random template and format it
     template = random.choice(template_list)
-    return template.format(title=reddit_title)
+    return template.format(title=sanitized_title)
 
 def generate_description(reddit_title: str, subreddit: str, reddit_id: str) -> str:
     """Generate an engaging description for the YouTube video."""
-    description = f"""🔥 {reddit_title}
+    # Apply content filtering to the title
+    sanitized_title = sanitize_text(reddit_title)
+    
+    # Get content warnings if any
+    warnings = get_content_warnings(reddit_title)
+    warning_text = "\n⚠️ " + "\n⚠️ ".join(warnings) + "\n\n" if warnings else ""
+    
+    description = f"""🔥 {sanitized_title}
 
-💬 Join the conversation in the comments below!
+{warning_text}💬 Join the conversation in the comments below!
 
 🔔 Subscribe and turn on notifications to never miss a story!
 
@@ -135,6 +153,10 @@ def upload_video(video_path: str, reddit_obj: Dict, subreddit: str) -> str:
         # Generate title and description
         title = generate_engaging_title(reddit_obj["thread_title"], subreddit)
         description = generate_description(reddit_obj["thread_title"], subreddit, reddit_obj["thread_id"])
+        
+        # Check if content is advertiser-friendly
+        if not is_advertiser_friendly(reddit_obj["thread_title"]):
+            print("Warning: Content may not be advertiser-friendly. Consider reviewing before publishing.")
         
         # Get random publish time
         publish_time = get_random_publish_time()
